@@ -231,12 +231,14 @@ static void FAST video_av_task()
         {
       
             //Update desired values given by canon AE
-            if (desired_iso==0)
+            if (desired_iso==0 || desired_tv==0 )
             {
             desired_iso=(int)(lens_info.raw_iso_ae);
             desired_tv=(int)COERCE(lens_info.raw_shutter_ae,0x60, 0x98);
             desired_expo=desired_iso-desired_tv;
             }
+            else
+            {
             kk++;
 
                 //Jumps
@@ -261,7 +263,7 @@ static void FAST video_av_task()
                 if (last_requested_iso!=last_frame_iso || current_tv==desired_tv)
                     virtual_expo_step(&current_virtual_expo,desired_expo,current_hard_expo);
                 
- 
+            }
             t1=t0;
             
         }   
