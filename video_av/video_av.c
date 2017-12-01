@@ -31,6 +31,7 @@ static int video_av_running;
 static CONFIG_INT("movie.av_expo.enabled", av_expo_enabled, 0);
 static CONFIG_INT("movie.av_expo.av_value", av_value, 30);
 static CONFIG_INT("movie.av_expo.smooth_changes", smooth_changes, 1);
+static CONFIG_INT("movie.av_expo.allow_jumps", allow_jumps, 1);
 
 extern void set_movie_digital_iso_gain_for_gradual_expo(int gain);
 extern int prop_set_rawiso_approx(unsigned iso);
@@ -127,7 +128,41 @@ int  virtual_expo_step(int *current_virtual_expo,int desired_expo,int current_ha
 }
 
 #define AE_SPEED 32
-#define JUMP_EXPO 16
+#define JUMP_EXPO_TRIGGER 30
+#define JUMP_EXPO_STOP 2
+
+void compute_jumps(int *current_expo,int desired_expo, int *current_tv, int *current_iso, int* last_requested_iso, int* current_hard_expo)
+{
+ int direction=0;
+ if (ABS((desired_expo)-(*current_expo))<JUMP_EXPO_TRIGGER )
+     return;
+  direction=((desired_expo)-(*current_expo))/ABS((desired_expo)-(*current_expo));
+ 
+ //Adjust Tv in the right direction
+ while (ABS((*current_expo)-(desired_expo))>=JUMP_EXPO_STOP &&
+        (*current_tv)>0x60 && (*current_tv)<0x98)
+        {
+            (*current_tv)-=direction;
+            (*current_expo)+=direction;
+        }
+        
+ //Adjust ISO in the right direction        
+ while (ABS((*current_expo)-(desired_expo))>=JUMP_EXPO_STOP &&
+        (*current_iso)>MIN_ISO && (*current_iso)<104)
+        {
+            (*current_iso)+=direction;
+            (*current_expo)+=direction;
+        }      
+        
+  bv_set_rawshutter((*current_tv));
+ (*last_requested_iso)=((((*current_iso)+4)/8)*8);
+ COERCE((*last_requested_iso),MIN_ISO,104);
+ bv_set_rawiso((*last_requested_iso));
+ while (read_frame_iso()!=(*last_requested_iso))
+ {bv_set_rawiso((*last_requested_iso));}
+ (*current_hard_expo)=(*last_requested_iso)-(*current_tv);
+ digital_gain_simulate_virtual_iso((*current_expo),(*current_hard_expo));  
+}
 
 static void FAST video_av_task()
 {
@@ -203,32 +238,29 @@ static void FAST video_av_task()
             desired_expo=desired_iso-desired_tv;
             }
             kk++;
-            bmp_printf(FONT_MED,300,300,"TV XXXXXXXXXXXXX");
-             bmp_printf(FONT_MED,300,300,"TV %d %d",current_tv,desired_tv);
-             
-            bmp_printf(FONT_MED,50,50,"ISO XXXXXXXXXXXXX");
-             bmp_printf(FONT_MED,50,50,"ISO %d %d %d %d",current_frame_iso,current_iso,last_requested_iso,desired_iso);
-             
-            bmp_printf(FONT_MED,150,150,"EXPO XXXXXXXXXXXXX");
-             bmp_printf(FONT_MED,150,150,"EXPO %d %d %d",current_virtual_expo,current_hard_expo,desired_expo);
-             kk++;
-            
-             if (kk%2==0  || !smooth_changes)
-             {
+
+                //Jumps
+                if (allow_jumps)
+                    compute_jumps(&current_virtual_expo,desired_expo, &current_tv, &current_iso, &last_requested_iso, &current_hard_expo);
+                
+                //iso_step
                 if(last_requested_iso==last_frame_iso|| ABS(last_requested_iso-current_iso)<7)
                     iso_step(&current_iso,&last_requested_iso,desired_iso);
-                if ( last_requested_iso!=last_frame_iso || kk%8==0 || !smooth_changes )
+                
+                //tv_step
+                if ( last_requested_iso!=last_frame_iso || kk%12==0 || !smooth_changes )
                 {
                     int oldtv=current_tv;
                     tv_step(&current_tv,desired_tv);
+                    bv_set_rawshutter(current_tv);
                     if(last_requested_iso==last_frame_iso)
                         current_virtual_expo-=(current_tv-oldtv);
-
                 }
                 
+                //virtual expo step for smoothing
                 if (last_requested_iso!=last_frame_iso || current_tv==desired_tv)
-                virtual_expo_step(&current_virtual_expo,desired_expo,current_hard_expo);
-             }
+                    virtual_expo_step(&current_virtual_expo,desired_expo,current_hard_expo);
+                
  
             t1=t0;
             
@@ -239,7 +271,7 @@ static void FAST video_av_task()
         }
         else
         {
-            msleep(5000);
+            msleep(500);
             current_iso=lens_info.raw_iso;
             last_requested_iso=lens_info.raw_iso;
             current_frame_iso=lens_info.raw_iso;
@@ -290,14 +322,22 @@ static struct menu_entry video_av_menu[] =
                 .name = "Av",
                 .priv = &av_value,
                 .update = menu_custom_display_av,
+                .help = "Desired aperture value.",
                 .max = 32,
                 .min = 22,
             },
             {
                 .name = "Smooth changes",
+                .help = "Smooth expo changes.",
                 .priv = &smooth_changes,
                 .max = 1
             },
+            {
+                .name = "Allow jumps",
+                .help = "Allow expo jumps when big changes in light happen.",
+                .priv = &allow_jumps,
+                .max = 1
+            },            
             MENU_EOL,
         }
     }
@@ -327,5 +367,15 @@ MODULE_CBRS_END()
 MODULE_CONFIGS_START()
       MODULE_CONFIG(av_expo_enabled)
       MODULE_CONFIG(av_value)
-      MODULE_CONFIG(smooth_changes)      
+      MODULE_CONFIG(smooth_changes)    
+      MODULE_CONFIG(allow_jumps)        
 MODULE_CONFIGS_END()
+
+//             bmp_printf(FONT_MED,300,300,"TV XXXXXXXXXXXXX");
+//              bmp_printf(FONT_MED,300,300,"TV %d %d",current_tv,desired_tv);
+//              
+//             bmp_printf(FONT_MED,50,50,"ISO XXXXXXXXXXXXX");
+//              bmp_printf(FONT_MED,50,50,"ISO %d %d %d %d",current_frame_iso,current_iso,last_requested_iso,desired_iso);
+//              
+//             bmp_printf(FONT_MED,150,150,"EXPO XXXXXXXXXXXXX");
+//              bmp_printf(FONT_MED,150,150,"EXPO %d %d %d",current_virtual_expo,current_hard_expo,desired_expo);
