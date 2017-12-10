@@ -142,11 +142,13 @@ int  virtual_expo_step(int *current_virtual_expo,int desired_expo,int current_ha
         return 1;
 }
 
-#define BUFFER_DESIRED 20
 void update_desired_expo(int *desired_iso, int *desired_tv, int *desired_expo)
 {
     int canon_iso=lens_info.raw_iso_ae;
     int canon_tv=lens_info.raw_shutter_ae;
+    
+    if (canon_iso ==0 || canon_tv ==0)
+        return;
     int desired_tv_to_set; int desired_iso_to_set;
 
     desired_tv_to_set=COERCE(canon_tv,0x60,0x98);
@@ -283,11 +285,12 @@ static void FAST video_av_task()
                 tv_step(&current_tv,desired_tv,&last_requested_iso,&current_iso,desired_iso,current_frame_iso);
                     
                 bv_set_rawshutter(current_tv);
-                if (last_requested_iso==current_frame_iso)
+                if (!can_override_frame_params && last_requested_iso==current_frame_iso)
                 {
                     int previous_hard_expo=current_hard_expo;
                     current_hard_expo=last_requested_iso-current_tv;
                     current_virtual_expo+=current_hard_expo-previous_hard_expo;
+                    //TODO We should not to a virtual expo stop after that.
                 }
             }
                 
@@ -299,6 +302,8 @@ static void FAST video_av_task()
             else
                 bv_set_rawiso(last_requested_iso);
                 
+            if (can_override_frame_params || last_requested_iso!=current_iso 
+                || current_iso!=desired_iso || current_iso!=current_frame_iso || current_tv == desired_tv)
             virtual_expo_step(&current_virtual_expo,desired_expo,current_hard_expo);
                 
             //Try to override frame parameters.
