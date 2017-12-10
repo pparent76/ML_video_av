@@ -34,6 +34,7 @@ static CONFIG_INT("movie.av_expo.enabled", av_expo_enabled, 0);
 static CONFIG_INT("movie.av_expo.av_value", av_value, 30);
 static CONFIG_INT("movie.av_expo.smooth_changes", smooth_changes, 1);
 static CONFIG_INT("movie.av_expo.allow_jumps", allow_jumps, 1);
+static CONFIG_INT("movie.av_expo.threshold", threshold, 9);
 
 extern void set_movie_digital_iso_gain_for_gradual_expo(int gain);
 extern int prop_set_rawiso_approx(unsigned iso);
@@ -62,6 +63,10 @@ int tv_step(int *current_tv,int desired_tv,int *last_requested_iso,int *current_
          {
                 return 0;
          }
+         
+         if((*last_requested_iso)!=(*current_iso) || (*current_iso)%8!=0 
+            || (*current_iso)!=desired_iso || (*current_iso)!=current_frame_iso)
+             return 0;
          
         //Faste change: Use iso to compensate if possible
         diff8=(diff/8)*8;
@@ -144,6 +149,27 @@ int  virtual_expo_step(int *current_virtual_expo,int desired_expo,int current_ha
         return 1;
 }
 
+#define BUFFER_DESIRED 20
+void update_desired_expo(int *desired_iso, int *desired_tv, int *desired_expo)
+{
+    int canon_iso=lens_info.raw_iso_ae;
+    int canon_tv=lens_info.raw_shutter_ae;
+    int desired_tv_to_set; int desired_iso_to_set;
+
+    desired_tv_to_set=COERCE(canon_tv,0x60,0x98);
+    desired_iso_to_set=COERCE(((canon_iso)/8)*8,MIN_ISO,MAX_ISO_VIDEO);
+    
+    if ( desired_iso_to_set-(*desired_iso)<=-threshold ||
+        ABS((desired_iso_to_set-desired_tv_to_set)-(*desired_expo))>=threshold)
+    {
+    (*desired_iso)=desired_iso_to_set;
+    (*desired_tv)=desired_tv_to_set;
+    (*desired_expo)=(*desired_iso)-(*desired_tv);
+    }
+        
+    
+}
+
 #define AE_SPEED 32
 #define JUMP_EXPO_TRIGGER 30
 #define JUMP_EXPO_STOP 2
@@ -222,9 +248,9 @@ static void FAST video_av_task()
             last_frame_iso=current_frame_iso;
       
             //Update desired values given by canon AE
-            desired_iso=(int)(lens_info.raw_iso_ae);
-            desired_tv=(int)COERCE(lens_info.raw_shutter_ae,0x60, 0x98);
-            desired_expo=desired_iso-desired_tv;
+//             desired_iso=(int)(lens_info.raw_iso_ae);
+//             desired_tv=(int)COERCE(lens_info.raw_shutter_ae,0x60, 0x98);
+//             desired_expo=desired_iso-desired_tv;
             
             //Update Av value if needed
             av_value=COERCE(av_value,lens_info.raw_aperture_min,lens_info.raw_aperture_max);
@@ -247,10 +273,11 @@ static void FAST video_av_task()
         if (t0-t1>=AE_SPEED)
         {
       
-            //Update desired values given by canon AE
-            desired_iso=(int)(lens_info.raw_iso_ae);
-            desired_tv=(int)COERCE(lens_info.raw_shutter_ae,0x60, 0x98);
-            desired_expo=desired_iso-desired_tv;
+//             //Update desired values given by canon AE
+//             desired_iso=(int)(lens_info.raw_iso_ae);
+//             desired_tv=(int)COERCE(lens_info.raw_shutter_ae,0x60, 0x98);
+//             desired_expo=desired_iso-desired_tv;
+            update_desired_expo(&desired_iso,&desired_tv,&desired_expo);
             kk++;
                 
             current_tv=COERCE(current_tv,0x60, 0x98);
@@ -359,6 +386,13 @@ static struct menu_entry video_av_menu[] =
                 .min = 22,
             },
             {
+                .name = "Expo Threshold",
+                .help = "Change exposition only when this delta is found to optimal expo.",
+                .priv = &threshold,
+                .min = 1,
+                .max = 16
+            },                 
+            {
                 .name = "Smooth changes",
                 .help = "Smooth expo changes.",
                 .priv = &smooth_changes,
@@ -369,7 +403,7 @@ static struct menu_entry video_av_menu[] =
                 .help = "Allow expo jumps when big changes in light happen.",
                 .priv = &allow_jumps,
                 .max = 1
-            },            
+            },           
             MENU_EOL,
         }
     }
@@ -400,7 +434,8 @@ MODULE_CONFIGS_START()
       MODULE_CONFIG(av_expo_enabled)
       MODULE_CONFIG(av_value)
       MODULE_CONFIG(smooth_changes)    
-      MODULE_CONFIG(allow_jumps)        
+      MODULE_CONFIG(allow_jumps)   
+      MODULE_CONFIG(threshold)        
 MODULE_CONFIGS_END()
 
 
