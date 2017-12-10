@@ -272,7 +272,11 @@ static void FAST video_av_task()
                     
                 bv_set_rawshutter(current_tv);
                 if (last_requested_iso==current_frame_iso)
+                {
+                    int previous_hard_expo=current_hard_expo;
                     current_hard_expo=last_requested_iso-current_tv;
+                    current_virtual_expo+=current_hard_expo-previous_hard_expo;
+                }
             }
                 
             //iso_step
