@@ -27,8 +27,6 @@
 
 static int video_av_running;
 
-
-
 // configs
 static CONFIG_INT("movie.av_expo.enabled", av_expo_enabled, 0);
 static CONFIG_INT("movie.av_expo.av_value", av_value, 30);
@@ -134,11 +132,6 @@ int  virtual_expo_step(int *current_virtual_expo,int desired_expo,int current_ha
         {(*current_virtual_expo)++; return 0;}
     if (diff1>0 && diff2>-8)
         {(*current_virtual_expo)--; return 0;}
-        
-//     if (diff1<0 && diff2<8  && rand()%4==0)
-//         {(*current_virtual_expo)++; return 0;}
-//     if (diff1>0 && diff2>-8  && rand()%4==0 )
-//         {(*current_virtual_expo)--; return 0;}   
         
     if ( diff2>10)
          {(*current_virtual_expo)--; return 0;}
@@ -246,11 +239,6 @@ static void FAST video_av_task()
             current_hard_tv=current_tv;
 
             last_frame_iso=current_frame_iso;
-      
-            //Update desired values given by canon AE
-//             desired_iso=(int)(lens_info.raw_iso_ae);
-//             desired_tv=(int)COERCE(lens_info.raw_shutter_ae,0x60, 0x98);
-//             desired_expo=desired_iso-desired_tv;
             
             //Update Av value if needed
             av_value=COERCE(av_value,lens_info.raw_aperture_min,lens_info.raw_aperture_max);
@@ -273,10 +261,7 @@ static void FAST video_av_task()
         if (t0-t1>=AE_SPEED)
         {
       
-//             //Update desired values given by canon AE
-//             desired_iso=(int)(lens_info.raw_iso_ae);
-//             desired_tv=(int)COERCE(lens_info.raw_shutter_ae,0x60, 0x98);
-//             desired_expo=desired_iso-desired_tv;
+            //Update desired values given by canon AE
             update_desired_expo(&desired_iso,&desired_tv,&desired_expo);
             kk++;
                 
@@ -390,7 +375,7 @@ static struct menu_entry video_av_menu[] =
                 .help = "Change exposition only when this delta is found to optimal expo.",
                 .priv = &threshold,
                 .min = 1,
-                .max = 16
+                .max = 32
             },                 
             {
                 .name = "Smooth changes",
