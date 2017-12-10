@@ -1,6 +1,6 @@
 diff -r dcc15836c1f3 src/lens.c
 --- a/src/lens.c	Mon Oct 30 16:10:01 2017 +0100
-+++ b/src/lens.c	Thu Nov 09 21:00:06 2017 +0100
++++ b/src/lens.c	Sun Dec 10 12:59:00 2017 +0100
 @@ -1287,6 +1287,8 @@
  {
      uint32_t raw = *(uint32_t *) buf;
@@ -18,7 +18,7 @@ diff -r dcc15836c1f3 src/lens.c
      
      if (shooting_mode == SHOOTMODE_M || shooting_mode == SHOOTMODE_TV)
      {
-@@ -2339,6 +2342,15 @@
+@@ -2339,6 +2342,27 @@
  }
  #endif
  
@@ -31,12 +31,24 @@ diff -r dcc15836c1f3 src/lens.c
 +        return 0;
 +    #endif
 +}
++
++int try_override_frame_parameters(int iso,int shutter)
++{
++     #if defined(FRAME_ISO) && defined(FRAME_SHUTTER) && defined(CONFIG_FRAME_ISO_OVERRIDE)
++        FRAME_ISO=iso;
++        FRAME_SHUTTER=shutter;
++        return 1;
++    #else
++        return 0;
++    #endif   
++}
++
  /** Camera control functions */
  int lens_set_rawaperture( int aperture)
  {
 diff -r dcc15836c1f3 src/lens.h
 --- a/src/lens.h	Mon Oct 30 16:10:01 2017 +0100
-+++ b/src/lens.h	Thu Nov 09 21:00:06 2017 +0100
++++ b/src/lens.h	Sun Dec 10 12:59:00 2017 +0100
 @@ -67,6 +67,8 @@
          // raw exposure values, in 1/8 EV steps
          uint8_t                 raw_aperture;
@@ -46,11 +58,12 @@ diff -r dcc15836c1f3 src/lens.h
          uint8_t                 raw_iso;
          uint8_t                 raw_iso_auto;
          uint8_t                 raw_picstyle;           /* fixme: move it out */
-@@ -210,6 +212,7 @@
+@@ -210,6 +212,8 @@
  extern int bv_set_rawshutter(unsigned shutter);
  extern int bv_set_rawaperture(unsigned aperture);
  extern int bv_set_rawiso(unsigned iso);
 +extern int read_frame_iso();
++extern int try_override_frame_parameters(int iso,int shutter);
  
  /* private, to be refactored */
  extern void bv_update();
