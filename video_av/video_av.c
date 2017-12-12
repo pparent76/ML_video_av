@@ -23,7 +23,7 @@
 #include <lens.h>
 #include <imath.h>
 
-#define MAX_ISO_VIDEO 104
+#define MAX_ISO_VIDEO 112
 
 static int video_av_running;
 
@@ -67,10 +67,11 @@ int tv_step(int *current_tv,int desired_tv,int *last_requested_iso,int *current_
              return 0;
          
         //Faste change: Use iso to compensate if possible
+        //TODO: if requiered do changes >=8 but <diff8
         diff8=(diff/8)*8;
         if (diff8!=0 && (*last_requested_iso)==(*current_iso) && (*current_iso)%8==0 
             && (*current_iso)==desired_iso && (*current_iso)==current_frame_iso
-            && (*current_iso)-diff8>=MIN_ISO && (*current_iso)-diff8<=MAX_ISO)
+            && (*current_iso)-diff8>=MIN_ISO && (*current_iso)-diff8<=MAX_ISO_VIDEO)
         {           
             (*current_iso)-=diff8;
             (*current_tv)-=diff8;
@@ -279,7 +280,7 @@ static void FAST video_av_task()
                 //If we cannot override frame param fo tv_step only one frame out of 12 or alongside with iso changes
                 (!can_override_frame_params && (/*last_requested_iso!=last_frame_iso ||*/ kk%12==0 ) )
                 //If we can override frame param do tv_step only if virtal expo is not late from hard_expo
-                || (can_override_frame_params 
+                || (can_override_frame_params
                 && SGN(current_hard_expo-current_virtual_expo)!=SGN(desired_expo-current_virtual_expo) ) )
             {
                 tv_step(&current_tv,desired_tv,&last_requested_iso,&current_iso,desired_iso,current_frame_iso);
@@ -290,13 +291,10 @@ static void FAST video_av_task()
                     int previous_hard_expo=current_hard_expo;
                     current_hard_expo=last_requested_iso-current_tv;
                     current_virtual_expo+=current_hard_expo-previous_hard_expo;
-                    //TODO We should not to a virtual expo stop after that.
                 }
             }
                 
             //iso_step
-            //TODO iso_step only if 
-            //ABS(current_virtual_expo-current_hard_expo)<4 || SGN(current_hard_expo-current_virtual_expo)!=SGN(desired_expo-current_virtual_expo)
             if(last_requested_iso==last_frame_iso|| ABS(last_requested_iso-current_iso)<7)
                 iso_step(&current_iso,&last_requested_iso,desired_iso);
             else
@@ -305,15 +303,17 @@ static void FAST video_av_task()
             if (can_override_frame_params || last_requested_iso!=current_iso 
                 || current_iso!=desired_iso || current_iso!=current_frame_iso || current_tv == desired_tv)
             virtual_expo_step(&current_virtual_expo,desired_expo,current_hard_expo);
-                
+           
+            t1=t0;
+            
             //Try to override frame parameters.
+            if (smooth_changes )
+            {
             can_override_frame_params=try_override_frame_parameters(last_requested_iso,current_tv);
             if (can_override_frame_params)
                 current_hard_expo=last_requested_iso-current_tv;
-
-            t1=t0;
+            }
         }   
-        
         digital_gain_simulate_virtual_iso(current_virtual_expo,current_hard_expo); 
         
         //End of main loop in activated mode    
