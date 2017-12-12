@@ -23,7 +23,7 @@
 #include <lens.h>
 #include <imath.h>
 
-#define MAX_ISO_VIDEO 112
+int MAX_ISO_VIDEO=104;
 
 static int video_av_running;
 
@@ -148,6 +148,9 @@ void update_desired_expo(int *desired_iso, int *desired_tv, int *desired_expo)
     int canon_iso=lens_info.raw_iso_ae;
     int canon_tv=lens_info.raw_shutter_ae;
     
+    if (canon_iso>MAX_ISO_VIDEO)
+            MAX_ISO_VIDEO=canon_iso;
+    
     if (canon_iso ==0 || canon_tv ==0)
         return;
     int desired_tv_to_set; int desired_iso_to_set;
@@ -211,6 +214,7 @@ static void FAST video_av_task()
     
     int t0 = get_ms_clock_value();
     int t1=t0;
+    
     //Init values       
     desired_iso=lens_info.raw_iso_ae; 
     current_frame_iso=read_frame_iso();last_requested_iso=0;current_iso=lens_info.raw_iso;
