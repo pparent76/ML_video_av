@@ -33,6 +33,7 @@ static CONFIG_INT("movie.av_expo.av_value", av_value, 30);
 static CONFIG_INT("movie.av_expo.smooth_changes", smooth_changes, 1);
 static CONFIG_INT("movie.av_expo.allow_jumps", allow_jumps, 1);
 static CONFIG_INT("movie.av_expo.threshold", threshold, 9);
+static CONFIG_INT("movie.av_expo.lock_expo", lock_expo, 0);
 
 extern void set_movie_digital_iso_gain_for_gradual_expo(int gain);
 extern int prop_set_rawiso_approx(unsigned iso);
@@ -150,6 +151,9 @@ void update_desired_expo(int *desired_iso, int *desired_tv, int *desired_expo)
     
     if (canon_iso>MAX_ISO_VIDEO)
             MAX_ISO_VIDEO=canon_iso;
+    
+    if (lock_expo && get_halfshutter_pressed())
+        return;
     
     if (canon_iso ==0 || canon_tv ==0)
         return;
@@ -397,7 +401,13 @@ static struct menu_entry video_av_menu[] =
                 .help = "Allow expo jumps when big changes in light happen.",
                 .priv = &allow_jumps,
                 .max = 1
-            },           
+            },  
+            {
+                .name = "Lock expo",
+                .help = "Lock expo when half shutter is pressed.",
+                .priv = &lock_expo,
+                .max = 1
+            },            
             MENU_EOL,
         }
     }
@@ -429,7 +439,8 @@ MODULE_CONFIGS_START()
       MODULE_CONFIG(av_value)
       MODULE_CONFIG(smooth_changes)    
       MODULE_CONFIG(allow_jumps)   
-      MODULE_CONFIG(threshold)        
+      MODULE_CONFIG(threshold)   
+      MODULE_CONFIG(lock_expo)       
 MODULE_CONFIGS_END()
 
 
