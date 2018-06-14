@@ -27,6 +27,8 @@ int MAX_ISO_VIDEO=104;
 
 static int video_av_running;
 
+int setpressed=0;
+
 // configs
 static CONFIG_INT("movie.av_expo.enabled", av_expo_enabled, 0);
 static CONFIG_INT("movie.av_expo.av_value", av_value, 30);
@@ -148,12 +150,32 @@ void update_desired_expo(int *desired_iso, int *desired_tv, int *desired_expo)
 {
     int canon_iso=lens_info.raw_iso_ae;
     int canon_tv=lens_info.raw_shutter_ae;
+    static int t0 = 0;
+    int t1 = get_ms_clock_value();
     
     if (canon_iso>MAX_ISO_VIDEO)
             MAX_ISO_VIDEO=canon_iso;
     
-    if (lock_expo && get_halfshutter_pressed())
+
+
+    if (t1-t0>800 && lock_expo!=2)
+    {
+        if (t1-t0>1000)
+        {
+            SW1(0,0);
+            t0=t1;
+        }
+        else
+        {
+        SW1(1,0);
+        }
+
+    }
+    
+        if ( (lock_expo==1 &&  setpressed==1 ) || (lock_expo==2 && !get_halfshutter_pressed()) )
         return;
+    
+
     
     if (canon_iso ==0 || canon_tv ==0)
         return;
@@ -364,6 +386,15 @@ static MENU_UPDATE_FUNC(menu_custom_display_av) {
     MENU_SET_VALUE("%d.%d", av_disp/10,av_disp%10);
 }
 
+static MENU_UPDATE_FUNC(menu_custom_display_lock) {
+   if (lock_expo==0)
+        MENU_SET_VALUE("NO");
+   if (lock_expo==1)
+        MENU_SET_VALUE("Whith SET");   
+   if (lock_expo==2)
+        MENU_SET_VALUE("When h-s released");    
+}
+
 
 static struct menu_entry video_av_menu[] =
 {
@@ -404,14 +435,24 @@ static struct menu_entry video_av_menu[] =
             },  
             {
                 .name = "Lock expo",
-                .help = "Lock expo when half shutter is pressed.",
+                .help = "Lock/Unlock with SET (1) or lock when half-shutter is NOT pressed (2).",
                 .priv = &lock_expo,
-                .max = 1
+                .update = menu_custom_display_lock,                
+                .max = 2
             },            
             MENU_EOL,
         }
     }
 };
+
+static unsigned int keypress_video_av(unsigned int key)
+{
+    if (key == MODULE_KEY_PRESS_SET)
+        setpressed=!setpressed;
+    
+    return 1;
+    
+}
 
 static unsigned int video_av_init() {
     video_av_menu->children[0].max=lens_info.raw_aperture_max;
@@ -432,6 +473,7 @@ MODULE_INFO_END()
 
 MODULE_CBRS_START()
     MODULE_CBR(CBR_SHOOT_TASK, video_av_shoot_task, 0)
+    MODULE_CBR(CBR_KEYPRESS, keypress_video_av, 0)
 MODULE_CBRS_END()
 
 MODULE_CONFIGS_START()
