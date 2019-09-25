@@ -22,4 +22,4 @@ intermediaries values like in standard ML exposure menu.
 :Author: Pierre Parent <pierre.parent s-at-s pparent.fr>
 :License: GPL
 :Summary: video Av exposure
-:Forum: http://www.magiclantern.fm/forum/index.php?topic=7847.0
+:Forum: https://www.magiclantern.fm/forum/index.php?topic=20878.0
