@@ -4,7 +4,7 @@ video_av
 Select Av value, and have the machine adjust ISO and Tv while you are shooting a video.
 (Usefull for cameras that do not have built-in video av mode e.g 500D,550D)
 
-This modules require that you enable magic lantern's expo override!
+IMPORTANT: This modules require that you enable magic lantern's expo override and canon auto-exposure!
 
 This module being based on Canon AE you keep all the features of canon auto-exposure: Exposure lock(*), 
 Manual exposure compensation. On 500D Canon auto-exposure is triggered by pushing half-shutter for a duration
