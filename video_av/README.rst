@@ -12,8 +12,7 @@ that you can set in Canon's menu. To have an almost permanent auto-expo without 
 set "measure delay" to 30 min in Canon's menu.
 
 You can enable or disable smoothing exposure changes. There is a small theoretical risk that setting smooth changes, 
-may produce rare glitches during transitions. In order to make this risk inexistant, it's recommended to disable ML global draw,
-disable energy saving, and use a fully charged battery.
+may produce rare glitches during transitions. In order to make this risk inexistant, it's recommended to disable ML global draw,disable energy saving, use a fully charged battery, and use noglitch post-processing if it happened ( https://github.com/pparent76/noglitch )
 
 You can select Av value from menu and it will only be applied when leaving menu, allowing 
 to do only one physical apperture change instead of needing to go physically through all
