@@ -18,6 +18,8 @@ You can select Av value from menu and it will only be applied when leaving menu,
 to do only one physical apperture change instead of needing to go physically through all
 intermediaries values like in standard ML exposure menu.
 
+When available one good configuration, that is recommended, is to disable smooth changes in video_av module, but to enable ML "gradual exposure" feature in video menu.
+
 :Author: Pierre Parent <pierre.parent s-at-s pparent.fr>
 :License: GPL
 :Summary: video Av exposure
